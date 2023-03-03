@@ -20,7 +20,7 @@ const insertPost = (params) => {
 }
 
 const selectPosts = (params) => {
-    const pageNum = params.page_no;
+    const pageNum = (params.page_no - 1) * 10;
     return `
         SELECT 
             TbPosts.pid AS post_id, 
@@ -39,13 +39,12 @@ const selectPosts = (params) => {
 const countPosts = () => {
     return `
         SELECT 
-            count(pid)
+            count(pid) AS count
         FROM tb_posts
     `;
 }
 
-const selectPost = (
-    params) => {
+const selectPost = (params) => {
     const postId = params.post_id
     return `
         SELECT 
