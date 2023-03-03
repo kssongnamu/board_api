@@ -1,7 +1,9 @@
 var express = require('express');
 var router = express.Router();
+var jwt = require('jsonwebtoken')
 const db = require('../db')
 const Queries = require('./queries/users')
+const jwtModules = require('../modules/jwt-modules')
 
 router.post('/', (req, res, next)=>{
     const params = req.body
@@ -44,8 +46,12 @@ router.get('/', (req, res, next)=>{
         if(rows.length == 0){
             return {success: false, message: '등록되지 않은 사용자 입니다. 아이디와 비밀번호를 확인해 주세요'}
         }
+        
+        let findUser = JSON.parse(JSON.stringify(rows[0]))
+        const token = jwt.sign(findUser, jwtModules.secretKey, { expiresIn: '30s' })    
+        findUser.token = token
+        return {success: true, result: findUser}
 
-        return {success: true, result: rows[0]}
     }
 
     getUserWork()
@@ -56,7 +62,7 @@ router.get('/', (req, res, next)=>{
 
 })
 
-router.delete('/', (req, res, next)=>{
+router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
     const params = req.query
     let sql
 
