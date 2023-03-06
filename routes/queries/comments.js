@@ -19,7 +19,6 @@ const insertComment = (params) => {
     `
 }
 const selectComments = (params) => {
-    const lastCommentId = params.comment_id;
     const postId = params.post_id;
     return `
         SELECT 
@@ -34,8 +33,7 @@ const selectComments = (params) => {
             tb_posts TbPosts ON TbComments.tb_posts_pid = TbPosts.pid INNER JOIN 
             tb_users TbUsers ON TbComments.tb_users_pid = TbUsers.pid
         WHERE 
-            TbPosts.pid = ${postId} AND
-            TbComments.pid < ${lastCommentId}
+            TbPosts.pid = ${postId}
         ORDER BY TbComments.pid DESC
         LIMIT 5
     `;

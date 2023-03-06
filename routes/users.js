@@ -48,8 +48,20 @@ router.get('/', (req, res, next)=>{
         }
         
         let findUser = JSON.parse(JSON.stringify(rows[0]))
-        const token = jwt.sign(findUser, jwtModules.secretKey, { expiresIn: '30s' })    
+
+        const expired = new Date()
+        // 7일 후 새벽 4시 만료처리
+        expired.setDate(expired.getDate() + 7)    
+        expired.setHours(4)
+        expired.setMinutes(0)    
+        expired.setSeconds(0)
+
+        const currDt = new Date()
+        let tokenExp = expired.getTime() - currDt.getTime()
+
+        const token = jwt.sign(findUser, jwtModules.secretKey, { expiresIn: tokenExp })    
         findUser.token = token
+        findUser.token_exp = expired
         return {success: true, result: findUser}
 
     }
@@ -61,6 +73,12 @@ router.get('/', (req, res, next)=>{
     .catch(err=> next(err))
 
 })
+
+router.get('/profile', jwtModules.userAuthenticate, (req, res, next)=>{
+    const user = req.user
+    res.status(200).send({profile: user})
+})
+
 
 router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
     const params = req.query
