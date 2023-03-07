@@ -2,8 +2,9 @@ var express = require('express');
 var router = express.Router();
 const db = require('../db')
 const Queries = require('./queries/posts')
+const jwtModules = require('../modules/jwt-modules')
 
-router.post('/', (req, res, next)=>{
+router.post('/', jwtModules.userAuthenticate, (req, res, next)=>{
     const params = req.body
     let sql
     
@@ -89,11 +90,17 @@ router.get('/post', (req, res, next)=>{
     .catch(err=>next(err))
 })
 
-router.put('/', (req, res, next)=>{
+router.put('/', jwtModules.userAuthenticate, (req, res, next)=>{
+    const user = req.user
     const params = req.body
+    const loginUserId = user.user_id
+    const editUserId = Number(params.user_id)
     let sql
 
     const updatePostWork = async()=>{
+        if (loginUserId !== editUserId) {
+            return {success: false, message: '수정할 권한이 없습니다.'}
+        }
         const con = await db.getConnection()
         await db.beginTransaction
         sql = Queries.updatePost(params)
@@ -121,11 +128,17 @@ router.put('/', (req, res, next)=>{
     .catch(err=>next(err))
 })
 
-router.delete('/', (req, res, next)=>{
+router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
+    const user = req.user
     const params = req.query
+    const loginUserId = user.user_id
+    const deleteUserId = Number(params.user_id)
     let sql
 
     const deletePostWork = async()=>{
+        if (loginUserId !== deleteUserId) {
+            return {success: false, message: '삭제할 권한이 없습니다.'}
+        }
         const con = await db.getConnection()
         sql = Queries.deletePost(params)
         try{

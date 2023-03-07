@@ -2,8 +2,9 @@ var express = require('express');
 var router = express.Router();
 const db = require('../db')
 const Queries = require('./queries/comments')
+const jwtModules = require('../modules/jwt-modules')
 
-router.post('/', (req, res, next)=>{
+router.post('/', jwtModules.userAuthenticate, (req, res, next)=>{
     const params = req.body
     let sql
     
@@ -49,11 +50,17 @@ router.get('/', (req, res, next)=>{
     .catch(err=> next(err))
 })
 
-router.delete('/', (req, res, next)=>{
+router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
+    const user = req.user
     const params = req.query
+    const loginUserId = user.user_id
+    const deleteUserId = Number(params.user_id)
     let sql
 
     const deleteCommentWork = async()=>{
+        if (loginUserId !== deleteUserId) {
+            return {success: false, message: '삭제할 권한이 없습니다.'}
+        }
         const con = await db.getConnection()
         sql = Queries.deleteComment(params)
         try{

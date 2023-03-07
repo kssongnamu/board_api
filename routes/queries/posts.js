@@ -65,11 +65,13 @@ const updatePost = (params) => {
     const title = params.title
     const content = params.content
     const postId = params.post_id
+    const userId = params.user_id
     return `
         UPDATE tb_posts SET 
             title = '${title}', 
             content = '${content}' 
-        WHERE pid = ${postId};
+        WHERE pid = ${postId} AND 
+        tb_users_pid = ${userId};  
     `;
 }
 

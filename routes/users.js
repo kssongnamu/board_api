@@ -79,12 +79,18 @@ router.get('/profile', jwtModules.userAuthenticate, (req, res, next)=>{
     res.status(200).send({profile: user})
 })
 
-
 router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
+    const user = req.user
     const params = req.query
+    const loginUserId = user.user_id
+    const deleteUserId = Number(params.user_id)
     let sql
 
     const deleteUserWork = async()=>{
+        if (loginUserId !== deleteUserId) {
+            return {success: false, message: '삭제할 권한이 없습니다.'}
+        }
+
         const con = await db.getConnection()
         sql = Queries.deleteUser(params)
         try{
