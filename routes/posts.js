@@ -1,11 +1,26 @@
-var express = require('express');
-var router = express.Router();
+var express = require('express')
+var router = express.Router()
 const db = require('../db')
 const Queries = require('./queries/posts')
 const jwtModules = require('../modules/jwt-modules')
+const fs = require('fs').promises;
+const multer = require('multer')
+const upload = multer({
+    // 파일 저장 위치 (disk , memory 선택)
+    storage: multer.diskStorage({
+        destination: function (req, file, done) {
+            done(null, './uploads/img');
+        },
+        filename: function (req, file, done) {
+            done(null, file.originalname);
+        }
+    }),
+    // 파일 허용 사이즈 (5 MB)
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
-router.post('/', jwtModules.userAuthenticate, (req, res, next)=>{
-    const params = req.body
+router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModules.userAuthenticate, (req, res, next)=>{
+    const params = JSON.parse(req.body.body)
     let sql
     
     const addPostWork = async()=>{
@@ -14,9 +29,15 @@ router.post('/', jwtModules.userAuthenticate, (req, res, next)=>{
         sql = Queries.insertPost(params)
         try{
             const inserted = await db.query(con, sql)
+            const postId = inserted.insertId
+            if (req.files === {}) {
+                const postImagesDirPath = `uploads/img/${postId}`
+                await fs.mkdir(postImagesDirPath, { recursive: true })
+                await fs.rename(req.files.upLoadImage[0].path, postImagesDirPath+'/1.png')
+            }
             await db.commit(con)
             con.release()
-            return {post_id: inserted.insertId}
+            return {post_id: postId}
         }catch(err) {
             await con.rollback()
             con.release()
@@ -30,6 +51,10 @@ router.post('/', jwtModules.userAuthenticate, (req, res, next)=>{
     })
     .catch(err=> next(err))
         
+})
+
+router.post('/image', upload.single('upLoadImage'), jwtModules.userAuthenticate, (req, res, next)=>{
+    res.status(200).send({success: true, message: '업로드 하였습니다.'})
 })
 
 router.get('/', (req, res, next)=>{
@@ -165,3 +190,24 @@ router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
 })
 
 module.exports = router;
+
+
+// 이미지 파일 읽기 fs.createReadStream 이용
+// router.get('/images/:filename', (req, res, next)=>{    
+//     const filename = req.params.filename
+
+//     const targetFile = `./upload/${filename}`    
+//     if(!fs.existsSync(targetFile)){
+//         return res.status(404).end()
+//     }
+    
+//     const stream = fs.createReadStream(targetFile)
+//     stream.on('open', ()=>{
+//         res.set('Content-Type', 'image/png')
+//         stream.pipe(res)
+//     })
+//     .on('error', ()=>{
+//         res.set('Content-Type', 'text/plain')
+//         res.status(404).end()
+//     })
+// })
