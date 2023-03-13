@@ -5,6 +5,7 @@ const Queries = require('./queries/posts')
 const jwtModules = require('../modules/jwt-modules')
 const fs = require('fs').promises;
 const multer = require('multer')
+const { constants } = require('buffer')
 const upload = multer({
     // 파일 저장 위치 (disk , memory 선택)
     storage: multer.diskStorage({
@@ -21,6 +22,7 @@ const upload = multer({
 
 router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModules.userAuthenticate, (req, res, next)=>{
     const params = JSON.parse(req.body.body)
+    const upLoadImage = req.files.upLoadImage
     let sql
     
     const addPostWork = async()=>{
@@ -30,10 +32,12 @@ router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModu
         try{
             const inserted = await db.query(con, sql)
             const postId = inserted.insertId
-            if (req.files === {}) {
+            if (upLoadImage) {
                 const postImagesDirPath = `uploads/img/${postId}`
                 await fs.mkdir(postImagesDirPath, { recursive: true })
-                await fs.rename(req.files.upLoadImage[0].path, postImagesDirPath+'/1.png')
+                for(let i = 0; i < upLoadImage.length; i++) {
+                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${i}.png`)
+                }
             }
             await db.commit(con)
             con.release()
@@ -51,10 +55,6 @@ router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModu
     })
     .catch(err=> next(err))
         
-})
-
-router.post('/image', upload.single('upLoadImage'), jwtModules.userAuthenticate, (req, res, next)=>{
-    res.status(200).send({success: true, message: '업로드 하였습니다.'})
 })
 
 router.get('/', (req, res, next)=>{
@@ -168,6 +168,8 @@ router.delete('/', jwtModules.userAuthenticate, (req, res, next)=>{
         sql = Queries.deletePost(params)
         try{
             const deleted = await db.query(con, sql)
+            const postImagesDirPath = `uploads/img/${params.post_id}`
+            try{await fs.rmdir(postImagesDirPath, { recursive: true })}catch{}
             await db.commit(con)
             con.release()
 
