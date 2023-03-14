@@ -22,6 +22,14 @@ const insertPost = (params) => {
     `
 }
 
+const insertFilePath = (postId, filePath) => {
+    return `
+        UPDATE tb_posts SET 
+            file_path = '${filePath}'
+        WHERE pid = ${postId}; 
+    `
+}
+
 const selectPosts = (params) => {
     const pageNum = (params.page_no - 1) * 10;
     return `
@@ -94,6 +102,7 @@ const deletePost = (params) => {
 
 module.exports = {
     insertPost,
+    insertFilePath,
     selectPosts,
     countPosts,
     selectPost,

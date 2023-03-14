@@ -36,8 +36,11 @@ router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModu
                 const postImagesDirPath = `uploads/img/${postId}`
                 await fs.mkdir(postImagesDirPath, { recursive: true })
                 for(let i = 0; i < upLoadImage.length; i++) {
-                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${i}.png`)
+                    console.log(upLoadImage[i])
+                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${upLoadImage[i].originalname}`)
                 }
+                sql = Queries.insertFilePath(postId, postImagesDirPath)
+                await db.query(con, sql)
             }
             await db.commit(con)
             con.release()
@@ -115,9 +118,10 @@ router.get('/post', (req, res, next)=>{
     .catch(err=>next(err))
 })
 
-router.put('/', jwtModules.userAuthenticate, (req, res, next)=>{
+router.put('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModules.userAuthenticate, (req, res, next)=>{
     const user = req.user
-    const params = req.body
+    const params = JSON.parse(req.body.body)
+    const upLoadImage = req.files.upLoadImage
     const loginUserId = user.user_id
     const editUserId = Number(params.user_id)
     let sql
@@ -131,6 +135,13 @@ router.put('/', jwtModules.userAuthenticate, (req, res, next)=>{
         sql = Queries.updatePost(params)
         try{
             const updated = await db.query(con, sql)
+            if (upLoadImage) {
+                const postImagesDirPath = `uploads/img/${params.post_id}`
+                await fs.mkdir(postImagesDirPath, { recursive: true })
+                for(let i = 0; i < upLoadImage.length; i++) {
+                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${i}.png`)
+                }
+            }
             await db.commit(con)
             con.release()
 
