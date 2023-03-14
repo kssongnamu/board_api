@@ -5,7 +5,6 @@ const Queries = require('./queries/posts')
 const jwtModules = require('../modules/jwt-modules')
 const fs = require('fs').promises;
 const multer = require('multer')
-const { constants } = require('buffer')
 const upload = multer({
     // 파일 저장 위치 (disk , memory 선택)
     storage: multer.diskStorage({
@@ -13,6 +12,7 @@ const upload = multer({
             done(null, './uploads/img');
         },
         filename: function (req, file, done) {
+            file.originalname = Buffer.from(file.originalname, "latin1").toString("utf8");
             done(null, file.originalname);
         }
     }),
@@ -33,13 +33,14 @@ router.post('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModu
             const inserted = await db.query(con, sql)
             const postId = inserted.insertId
             if (upLoadImage) {
-                const postImagesDirPath = `uploads/img/${postId}`
-                await fs.mkdir(postImagesDirPath, { recursive: true })
+                const postFileDirPath = `uploads/img/${postId}`
+                await fs.mkdir(postFileDirPath, { recursive: true })
                 for(let i = 0; i < upLoadImage.length; i++) {
-                    console.log(upLoadImage[i])
-                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${upLoadImage[i].originalname}`)
+                    let oldPath = upLoadImage[i].path
+                    let newPath = `${postFileDirPath}/${upLoadImage[i].originalname}`
+                    await fs.rename(oldPath, newPath)
                 }
-                sql = Queries.insertFilePath(postId, postImagesDirPath)
+                sql = Queries.insertFilePath(postId, `/img/${postId}`)
                 await db.query(con, sql)
             }
             await db.commit(con)
@@ -102,6 +103,10 @@ router.get('/post', (req, res, next)=>{
     const getPostWork = async()=>{
         const con = await db.getConnection()
         const rows = await db.query(con, sql)
+        try{
+            const fileNames = await fs.readdir(`uploads/${rows[0].file_path}`)
+            rows[0].file_names = fileNames
+        }catch{}
         con.release()
 
         if (rows.length === 0){
@@ -135,12 +140,17 @@ router.put('/', upload.fields([{name: 'upLoadImage'}, {name: 'body'}]), jwtModul
         sql = Queries.updatePost(params)
         try{
             const updated = await db.query(con, sql)
+            const postFileDirPath = `uploads/img/${params.post_id}`
+            try{await fs.rmdir(postFileDirPath, { recursive: true })}catch{}
             if (upLoadImage) {
-                const postImagesDirPath = `uploads/img/${params.post_id}`
-                await fs.mkdir(postImagesDirPath, { recursive: true })
+                await fs.mkdir(postFileDirPath, { recursive: true })
                 for(let i = 0; i < upLoadImage.length; i++) {
-                    await fs.rename(upLoadImage[i].path, `${postImagesDirPath}/${i}.png`)
+                    let oldPath = upLoadImage[i].path
+                    let newPath = `${postFileDirPath}/${upLoadImage[i].originalname}`
+                    await fs.rename(oldPath, newPath)
                 }
+                sql = Queries.insertFilePath(params.post_id, `/img/${params.post_id}`)
+                await db.query(con, sql)
             }
             await db.commit(con)
             con.release()

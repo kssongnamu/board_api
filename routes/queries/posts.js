@@ -1,21 +1,18 @@
 const insertPost = (params) => {
     const title = params.title
     const content = params.content
-    const fileCount = params.file_count
     const userId = params.user_id
 
     return `
         INSERT INTO tb_posts(
             title, 
             content,
-            file_count,
             created_at,
             tb_users_pid
         )
         VALUES (
             "${title}",
             "${content}",
-            "${fileCount}",
             CURRENT_TIMESTAMP(),
             ${userId}
         );
@@ -62,7 +59,7 @@ const selectPost = (params) => {
             TbPosts.pid AS post_id, 
             TbPosts.title, 
             TbPosts.content, 
-            TbPosts.file_count, 
+            TbPosts.file_path, 
             TbPosts.created_at, 
             TbUsers.pid AS user_id, 
             TbUsers.user_name 
@@ -76,14 +73,12 @@ const selectPost = (params) => {
 const updatePost = (params) => {
     const title = params.title
     const content = params.content
-    const fileCount = params.file_count
     const postId = params.post_id
     const userId = params.user_id
     return `
         UPDATE tb_posts SET 
             title = '${title}', 
-            content = '${content}',
-            file_count = '${fileCount}' 
+            content = '${content}'
         WHERE pid = ${postId} AND 
         tb_users_pid = ${userId};  
     `;
